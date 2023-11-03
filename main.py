@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 import dash_bootstrap_components as dbc
 import numpy as np
 import plotly.graph_objects as go
@@ -7,26 +9,22 @@ external_stylesheets = [dbc.themes.DARKLY]
 
 app = Dash(__name__, external_stylesheets=external_stylesheets)
 
-app.layout = html.Div(
-    dcc.Graph(id='plot')
-)
-
 N_POINTS = 60
 
-DIAMOND_COLOUR = 'rgba(0,0,255,1)'
+BLACK = 'rgba(0,0,255,1)'
 
 DIAMOND = np.array(
-        [
-            [1, 0],
-            [0, 1],
-            [-1, 0],
-            [0, -1],
-            [1, 0]
-        ]
-    )
+    [
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+        [0, -1],
+        [1, 0]
+    ]
+)
 
 
-def generate_vertices():
+def generate_vertices() -> Dict[str, List[float]]:
     radius = 0.3
 
     angles = np.linspace(0, 2 * np.pi, N_POINTS)
@@ -44,11 +42,6 @@ def generate_vertices():
     out = np.vstack(out)
 
     return {'x': out[:, 0].tolist(), 'y': out[:, 1].tolist()}
-
-
-def get_vertices(idx: int):
-    vertices = generate_vertices()
-    return vertices[idx % N_POINTS]
 
 
 figure = go.Figure(
@@ -73,7 +66,7 @@ figure = go.Figure(
 figure.add_trace(go.Scatter(x=[], y=[], mode='lines', line=dict(width=4)))
 
 
-squares = [
+OCCLUDERS = [
     DIAMOND + np.array([3, 0]),
     DIAMOND + np.array([0, 3]),
     DIAMOND + np.array([-3, 0]),
@@ -81,11 +74,11 @@ squares = [
 ]
 
 
-for square in squares:
+for occluder in OCCLUDERS:
     figure.add_trace(
         go.Scatter(
-            x=square[:, 0].tolist(),
-            y=square[:, 1].tolist(),
+            x=occluder[:, 0].tolist(),
+            y=occluder[:, 1].tolist(),
             fill='toself',
             fillcolor="#222",
             mode='lines',
@@ -186,21 +179,24 @@ app.clientside_callback(
 )
 
 
+def make_patch(colour: str) -> Patch:
+    patched_figure = Patch()
+
+    for i in range(1, 5):
+        patched_figure["data"][i]["fillcolor"] = colour
+        patched_figure["data"][i]["line"]["color"] = colour
+
+    return patched_figure
+
+
 @app.callback(
     Output('graph', 'figure'),
     Input('transparent', 'n_clicks'),
     prevent_initial_call=True
 )
-def make_transparent(n_clicks: int):
-    patched_figure = Patch()
-
-    transparent = 'rgba(0, 0, 0, 0.5)'
-
-    for i in range(1, 5):
-        patched_figure["data"][i]["fillcolor"] = transparent
-        patched_figure["data"][i]["line"]["color"] = transparent
-
-    return patched_figure
+def make_transparent(n_clicks: int) -> Patch:
+    colour = 'rgba(0, 0, 0, 0.5)'
+    return make_patch(colour=colour)
 
 
 @app.callback(
@@ -208,16 +204,9 @@ def make_transparent(n_clicks: int):
     Input('grey', 'n_clicks'),
     prevent_initial_call=True
 )
-def make_grey(n_clicks: int):
-    patched_figure = Patch()
-
-    transparent = 'rgba(100, 100, 100, 0.5)'
-
-    for i in range(1, 5):
-        patched_figure["data"][i]["fillcolor"] = transparent
-        patched_figure["data"][i]["line"]["color"] = transparent
-
-    return patched_figure
+def make_grey(n_clicks: int) -> Patch:
+    colour = 'rgba(100, 100, 100, 0.5)'
+    return make_patch(colour=colour)
 
 
 @app.callback(
@@ -225,16 +214,9 @@ def make_grey(n_clicks: int):
     Input('invisible', 'n_clicks'),
     prevent_initial_call=True
 )
-def make_invisible(n_clicks: int):
-    patched_figure = Patch()
-
-    transparent = "#222"
-
-    for i in range(1, 5):
-        patched_figure["data"][i]["fillcolor"] = transparent
-        patched_figure["data"][i]["line"]["color"] = transparent
-
-    return patched_figure
+def make_invisible(n_clicks: int) -> Patch:
+    colour = "#222"
+    return make_patch(colour=colour)
 
 
 @app.callback(
@@ -242,12 +224,12 @@ def make_invisible(n_clicks: int):
     Input('visible', 'n_clicks'),
     prevent_initial_call=True
 )
-def make_visible(n_clicks: int):
+def make_visible(n_clicks: int) -> Patch:
     patched_figure = Patch()
 
     for i in range(1, 5):
-        patched_figure["data"][i]["fillcolor"] = DIAMOND_COLOUR
-        patched_figure["data"][i]["line"]["color"] = DIAMOND_COLOUR
+        patched_figure["data"][i]["fillcolor"] = BLACK
+        patched_figure["data"][i]["line"]["color"] = BLACK
 
     return patched_figure
 
