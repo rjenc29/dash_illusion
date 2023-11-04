@@ -7,11 +7,15 @@ from dash import Dash, dcc, html, Input, Output, State, Patch
 
 external_stylesheets = [dbc.themes.DARKLY]
 
-app = Dash(__name__, external_stylesheets=external_stylesheets)
+app = Dash(
+    __name__,
+    external_stylesheets=external_stylesheets,
+    update_title=None
+)
 
 N_POINTS = 60
 
-BLACK = 'rgba(0,0,255,1)'
+BLUE = 'rgba(0,0,255,1)'
 
 DIAMOND = np.array(
     [
@@ -25,7 +29,7 @@ DIAMOND = np.array(
 
 
 def generate_vertices() -> Dict[str, List[float]]:
-    radius = 0.3
+    radius = 0.5
 
     angles = np.linspace(0, 2 * np.pi, N_POINTS)
     xs = np.sin(angles) * radius
@@ -33,7 +37,12 @@ def generate_vertices() -> Dict[str, List[float]]:
 
     vertices = DIAMOND * 3
 
-    offsets = np.hstack([xs.reshape(-1, 1), ys.reshape(-1, 1)])
+    offsets = np.hstack(
+        [
+            xs.reshape(-1, 1),
+            ys.reshape(-1, 1)
+        ]
+    )
 
     out = []
     for i in range(N_POINTS):
@@ -41,7 +50,10 @@ def generate_vertices() -> Dict[str, List[float]]:
 
     out = np.vstack(out)
 
-    return {'x': out[:, 0].tolist(), 'y': out[:, 1].tolist()}
+    return {
+        'x': out[:, 0].tolist(),
+        'y': out[:, 1].tolist()
+    }
 
 
 figure = go.Figure(
@@ -49,12 +61,14 @@ figure = go.Figure(
         xaxis=dict(
             scaleanchor="y",
             scaleratio=1,
-            visible=False
+            ticks="",
+            showticklabels=False
         ),
         yaxis=dict(
             scaleanchor="y",
             scaleratio=1,
-            visible=False
+            ticks="",
+            showticklabels=False
         ),
         showlegend=False,
         margin=dict(l=0, r=0, t=0, b=50),
@@ -63,7 +77,14 @@ figure = go.Figure(
     )
 )
 
-figure.add_trace(go.Scatter(x=[], y=[], mode='lines', line=dict(width=4)))
+figure.add_trace(
+    go.Scatter(
+        x=[],
+        y=[],
+        mode='lines',
+        line=dict(width=6)
+    )
+)
 
 
 OCCLUDERS = [
@@ -140,6 +161,29 @@ app.layout = dbc.Container(
                                     'Invisible',
                                     id='invisible'
                                 ),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [
+                                                html.Div(
+                                                    'Alpha'
+                                                )
+                                            ],
+                                            width=2
+                                        ),
+                                        dbc.Col(
+                                            [
+                                                dcc.Slider(
+                                                    min=0,
+                                                    max=1,
+                                                    value=0,
+                                                    id='slider'
+                                                )
+                                            ],
+                                            width=10
+                                        ),
+                                    ]
+                                ),
                             ],
                             gap=2
                         )
@@ -195,7 +239,7 @@ def make_patch(colour: str) -> Patch:
     prevent_initial_call=True
 )
 def make_transparent(n_clicks: int) -> Patch:
-    colour = 'rgba(0, 0, 0, 0.5)'
+    colour = 'rgba(34, 34, 34, 0.7)'
     return make_patch(colour=colour)
 
 
@@ -215,7 +259,7 @@ def make_grey(n_clicks: int) -> Patch:
     prevent_initial_call=True
 )
 def make_invisible(n_clicks: int) -> Patch:
-    colour = "#222"
+    colour = 'rgba(34, 34, 34, 1)'
     return make_patch(colour=colour)
 
 
@@ -225,13 +269,8 @@ def make_invisible(n_clicks: int) -> Patch:
     prevent_initial_call=True
 )
 def make_visible(n_clicks: int) -> Patch:
-    patched_figure = Patch()
-
-    for i in range(1, 5):
-        patched_figure["data"][i]["fillcolor"] = BLACK
-        patched_figure["data"][i]["line"]["color"] = BLACK
-
-    return patched_figure
+    colour = BLUE
+    return make_patch(colour=colour)
 
 
 if __name__ == '__main__':
