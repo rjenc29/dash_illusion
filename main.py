@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import dash_bootstrap_components as dbc
 import numpy as np
@@ -12,10 +12,9 @@ app = Dash(
     external_stylesheets=external_stylesheets,
     update_title=None
 )
+server = app.server
 
 N_POINTS = 60
-
-BLUE = 'rgba(0,0,255,1)'
 
 DIAMOND = np.array(
     [
@@ -62,13 +61,15 @@ figure = go.Figure(
             scaleanchor="y",
             scaleratio=1,
             ticks="",
-            showticklabels=False
+            showticklabels=False,
+            dtick=1
         ),
         yaxis=dict(
             scaleanchor="y",
             scaleratio=1,
             ticks="",
-            showticklabels=False
+            showticklabels=False,
+            dtick=1
         ),
         showlegend=False,
         margin=dict(l=0, r=0, t=0, b=50),
@@ -101,9 +102,9 @@ for occluder in OCCLUDERS:
             x=occluder[:, 0].tolist(),
             y=occluder[:, 1].tolist(),
             fill='toself',
-            fillcolor="#222",
+            fillcolor='rgba(34, 34, 34, 1)',
             mode='lines',
-            line=dict(color="#222")
+            line=dict(color='rgba(34, 34, 34, 1)')
         )
     )
 
@@ -121,7 +122,10 @@ app.layout = dbc.Container(
                     [
                         dcc.Graph(
                             id='graph',
-                            figure=figure
+                            figure=figure,
+                            config={
+                                'staticPlot': True
+                            }
                         ),
                         dcc.Interval(
                             id='interval',
@@ -146,6 +150,10 @@ app.layout = dbc.Container(
                             [
                                 html.Div('Occluders'),
                                 dbc.Button(
+                                    'Invisible',
+                                    id='invisible'
+                                ),
+                                dbc.Button(
                                     'Visible',
                                     id='visible'
                                 ),
@@ -156,10 +164,6 @@ app.layout = dbc.Container(
                                 dbc.Button(
                                     'Grey',
                                     id='grey'
-                                ),
-                                dbc.Button(
-                                    'Invisible',
-                                    id='invisible'
                                 ),
                                 dbc.Row(
                                     [
@@ -176,8 +180,8 @@ app.layout = dbc.Container(
                                                 dcc.Slider(
                                                     min=0,
                                                     max=1,
-                                                    value=0,
-                                                    id='slider'
+                                                    value=1,
+                                                    id='alpha'
                                                 )
                                             ],
                                             width=10
@@ -198,6 +202,17 @@ app.layout = dbc.Container(
                 html.A(
                     "152 Visual Phenomena & Optical Illusions",
                     href='https://michaelbach.de/ot/mot-motionBinding/index.html',
+                    target='_blank'
+                )
+            ],
+            class_name="mb-3"
+        ),
+        dbc.Row(
+            [
+                html.Div("Source code: "),
+                html.A(
+                    "https://github.com/rjenc29/dash_illusion",
+                    href='https://github.com/rjenc29/dash_illusion',
                     target='_blank'
                 )
             ],
@@ -235,42 +250,61 @@ def make_patch(colour: str) -> Patch:
 
 @app.callback(
     Output('graph', 'figure'),
+    Output('alpha', 'value'),
     Input('transparent', 'n_clicks'),
     prevent_initial_call=True
 )
-def make_transparent(n_clicks: int) -> Patch:
+def make_transparent(n_clicks: int) -> Tuple[Patch, float]:
     colour = 'rgba(34, 34, 34, 0.7)'
-    return make_patch(colour=colour)
+    return make_patch(colour=colour), 0.7
 
 
 @app.callback(
     Output('graph', 'figure', allow_duplicate=True),
+    Output('alpha', 'value', allow_duplicate=True),
     Input('grey', 'n_clicks'),
     prevent_initial_call=True
 )
-def make_grey(n_clicks: int) -> Patch:
+def make_grey(n_clicks: int) -> Tuple[Patch, float]:
     colour = 'rgba(100, 100, 100, 0.5)'
-    return make_patch(colour=colour)
+    return make_patch(colour=colour), 0.5
 
 
 @app.callback(
     Output('graph', 'figure', allow_duplicate=True),
+    Output('alpha', 'value', allow_duplicate=True),
     Input('invisible', 'n_clicks'),
     prevent_initial_call=True
 )
-def make_invisible(n_clicks: int) -> Patch:
+def make_invisible(n_clicks: int) -> Tuple[Patch, float]:
     colour = 'rgba(34, 34, 34, 1)'
-    return make_patch(colour=colour)
+    return make_patch(colour=colour), 1.0
 
 
 @app.callback(
     Output('graph', 'figure', allow_duplicate=True),
+    Output('alpha', 'value', allow_duplicate=True),
     Input('visible', 'n_clicks'),
     prevent_initial_call=True
 )
-def make_visible(n_clicks: int) -> Patch:
-    colour = BLUE
-    return make_patch(colour=colour)
+def make_visible(n_clicks: int) -> Tuple[Patch, float]:
+    colour = 'rgba(0,0,255,1)'
+    return make_patch(colour=colour), 1.0
+
+
+@app.callback(
+    Output('graph', 'figure', allow_duplicate=True),
+    Input('alpha', 'value'),
+    State('graph', 'figure'),
+    prevent_initial_call=True
+)
+def change_alpha(alpha: float, figure: go.Figure) -> Patch:
+    colour = figure['data'][-1]['fillcolor']
+
+    rgb = colour.rsplit(',', maxsplit=1)[0]
+    new_colour = f'{rgb}, {alpha})'
+
+    return make_patch(colour=new_colour)
 
 
 if __name__ == '__main__':
